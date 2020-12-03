@@ -1,0 +1,244 @@
+C:\Users\jfbla\Downloads\curl-7.73.0_1-win64-mingw\curl-7.73.0-win64-mingw\bin>curl -X GET http://localhost:5984
+
+apres avoir creer base dd
+C:\Users\jfbla\Downloads\curl-7.73.0_1-win64-mingw\curl-7.73.0-win64-mingw\bin>curl -u admin:admin -X GET http://localhost:5984/testbigdata
+
+C:\Users\jfbla\Downloads\curl-7.73.0_1-win64-mingw\curl-7.73.0-win64-mingw\bin>curl -u admin:admin -X GET http://localhost:5984/testbigdata/doc1 -d \{"prenom":"Jeff"}
+
+curl -u admin:admin -X PUT http://localhost:5984/testbigdata/doc1 -d  @film11.json -H "Content-Type: application/json"
+
+injecter doc (marche yes)
+curl -u admin:admin -X PUT http://localhost:5984/etudiants/doc1 -d @film11.json -H "ContentType:application/json"
+ 
+marche pas
+C:\Users\jfbla\Downloads\curl-7.73.0_1-win64-mingw\curl-7.73.0-win64-mingw\bin>curl -u admin:admin -X POST http://localhost:5984/filmsliste/doc_bulk_docs -d @filmscouchdb.json -H "Content-Type:application/json"
+bonne formule avec post erreur mais put ne créer qu'un fichier avec tout dedans
+
+faire exmple, capacité système (mem disque...), reflechir client couchdb,
+
+
+bulk separe par les crochets, créer plusieurs fichiers
+pas bulk donne un seul fichier
+
+GET -> renvoie une ressource
+PUT -> mettre à jour une ressource
+POST -> créer une ressource
+DELETE une ressource
+
+
+pour le maitre du serveur:
+dans le bin
+\Program Files\MongoDB\Server\4.0.1\bin\mongo.exe
+
+dans autre fenetre
+mongo pour lancer client
+
+##
+Si la base n'existe pas
+use cours
+-> switched to db cours
+##
+
+Client:
+> use cours
+switched to db cours
+> db.createCollection("intitule")
+{ "ok" : 1 }
+> db.createCollection("intitule")
+{
+        "ok" : 0,
+        "errmsg" : "Collection already exists. NS: cours.intitule",
+        "code" : 48,
+        "codeName" : "NamespaceExists"
+}
+> use demo
+switched to db demo
+> db.cours
+demo.cours
+> db.intitule.insert({"cours1": "Bug Data"})
+WriteResult({ "nInserted" : 1 })
+> db.count()
+uncaught exception: TypeError: db.count is not a function :
+@(shell):1:1
+> show collections
+intitule
+> db.cours.count()
+0
+> db.intitule.drop()
+true
+> sh collections()
+uncaught exception: SyntaxError: unexpected token: identifier :
+@(shell):1:3
+
+
+client
+> use demo30novembre
+> db.createCollection("restaurants")
+
+dans une autre fenetre cmd (pas serveur ni client)
+> mongoimport -d demo30novembre -C restaurants --file restaurants.json
+		#base		#nomdecollection 	#fichier à importer
+
+
+query and projection operators
+https://docs.mongodb.com/v3.2/reference/operator/query/
+
+Pour utiliser Mongodb, on démarre le serveur on utilise la commande mongodb
+mode client/serveur
+démarre serveur avec mongo
+
+équivalent phpmyadmin c'est robot 3T
+sur robot3t
+db.restaurants.find() : elle permet de renvoyer tous les éléments/documents d'une collection
+db.restaurants.findOne() : cherche première valeur/document
+
+
+-------------------Filtre et projection--------------
+¤ Satisfaire un pattern (doc json)
+db.restaurants.find({"borough" : "Manhattan"})         #affiche restaurants à Manhattan
+db.restaurants.find({"borough" : "Manhattan"}).count()     #affiche que le nombre
+¤ Pattern peut être un objet complexe (n'importe quel doc json)
+
+¤ Afficher le nombre : ".count()
+db.restaurants.find({"borough" : "Manhattan" , "cuisine" : "Irish"}).count()
+
+¤ Recherche dans un document : "address.zipcode"
+db.restaurants.find({"borough" : "Manhattan" , "cuisine" : "Irish", "address.zipcode" : "10019"})
+
+¤ Trouver un élément spécifique : ici le mot "pub" et insensible à la casse
+db.restaurants.find({"borough" : "Manhattan" , "cuisine" : "Irish", "address.zipcode" : "10019", "name" : /pub/i})
+
+¤ Pour ces documents afficher que le nom mais pas les identifiants / parametres précis :
+db.restaurants.find({
+    "borough" : "Manhattan" ,
+    "cuisine" : "Irish",
+    "address.zipcode" : "10019",
+    "name" : /pub/i
+    },
+    {
+    "name" : 1,
+    "_id" : 0    
+    }    
+    )
+
+------------Filtrage avec des comparaisons-----------------
+¤ Renvoyer des restaurants qui se trouvent dans un quartier ayant un des score inférieur à une certaine valeur
+
+db.getCollection('restaurants').find({
+      "borough" : "Manhattan" ,
+      "grades.score" : {$lt : 5}  
+})
+
+¤ Avec méthode là on avait des notes sup à 5 donc on spécifie pour chaque note pour score <5, sans  $not : {$gte : 5} , la requête ramene tous les score :
+db.getCollection('restaurants').find({
+      "borough" : "Manhattan" ,
+      "grades.score" : {
+          $lt : 5,
+          $not : {
+              $gte : 5
+              }  
+          }
+})
+
+¤ Là on spécifie l'affichage 
+db.getCollection('restaurants').find({
+      "borough" : "Manhattan" ,
+      "grades.score" : {
+          $lt : 5,
+          $not : {
+              $gte : 5
+              }  
+          }
+},
+{
+    "name":1 , "_id":0, "grades.score":1
+}
+)
+
+¤ Renvoyer tous les restaurants avec un grade A une note inférieur à 5
+db.restaurants.find({
+      "borough" : "Manhattan" ,
+      "grades" : {
+          $elemMatch : 
+          {
+              "grade" : "A",
+              "score" : {$lt : 5}
+          }
+      }
+},
+{
+    "grades.grade":1, "grade.score":1, "_id":0
+})
+
+¤ Renvoyer tous les restaurant dont le dernier (plus récent) score est B
+db.restaurants.find({
+    "grades.0.grade" : "B"},
+
+{"grades.grade":1, "name":1}
+)
+
+¤ Recherche sur un champ pour renvoyer toutes les valurs disponibles pour un champ (quartiers, grades, score)
+db.restaurants.distinct("borough")
+db.restaurants.distinct("grades.grade")
+db.restaurants.distinct("grades.score")
+
+-----------------Aggrégation------------------
+¤ Même chose que plus haut on affiche mes restau dont le dernier score est B, aggregate permet faire liaison entre des bdd
+db.restaurants.aggregate([
+{$match :{
+    "grades.0.grade" : "B"
+}},
+{$project : {
+    "name" : 1
+}}
+])
+
+
+¤ Equivalent de faire une recherche comme avant, mais cela permet de faire plusieurs requetes d'un coup, 
+¤ elles sont ensuite affichées sous différents onglets (match, project, sort) 
+¤ et en suite les aggrégat les regroupe en afichage -> db.restaurants...
+
+match = {$match :{"grades.0.grade" : "B", "cuisine" : "Italian"}};           //db.restaurants.find()
+project = {$project : {"_id":0}};            //db.restaurants.find({},{})       deux paramètres avec projection
+db.restaurants.aggregate([match, project]);         //aggrégation
+sort = {$sort : {"address.zipcode":1}};
+db.restaurants.aggregate([match, project, sort]);       //command_1 | command_2
+
+
+¤ Requete permettant de renvoyer le nombre de restaurants italien ayant un B en dernière évaluation.
+¤ Cela nous créé deux nouveaux onglets qui affichent le même résultat.
+//sans utiliser le $group
+db.restaurants.count({"grades.0.grade" : "B"});   //applique un filtre
+//on peut écrire autrement la requête
+db.restaurants.find({"grades.0.grade" : "B"}).count();
+//en utilisant group
+groupe = {$group : {"_id":null, "somme": {$sum: 1} }};
+db.restaurants.aggregate([match,groupe]);
+
+
+¤ Nombre total de restaurants dans le quartier
+//restaurant dans le Bronxavec méthode groupe, on garde la classe groupe pour faire la somme.
+¤ Test avec Manhattan et autre, le nombre diffère et est corect.
+quartier = {$match :{"borough" : "Bronx"}};
+db.restaurants.aggregate([quartier,groupe]);
+
+-------------Mise à jour---------------
+¤ On modifie ici le type de cuisine d'un restaurant, on se sert de son id pour le trouver.
+¤ On l'affiche à la fin et on remarque que cela a bien été modifié. 
+¤ On peut utiliser $set pour ajouter une clé, en modifier une et $unset pour supprimer une clé en question.
+db.restaurants.update(
+{
+    "_id" : ObjectId("5fc4d3a6f5eb4a8fd6f0ad54")
+},
+{
+    $set : { "cuisine": "Lorraine"}
+}
+);
+db.restaurants.findOne();
+
+
+
+Pour la prochaine fois :
+Films avec références acteurs
+Acteurs avec références
+Ecrire la jointure entre les deux connexions (films dans lequel un acteur a joué)
